@@ -904,50 +904,80 @@ footer {
 
 
 
-/* ══ RESPONSIVE MOBILE ══ */
+
+
+/* ══ MOBILE ONLY — ne touche pas au desktop ══ */
 @media (max-width: 768px) {
-  nav { padding: 14px 20px !important; }
+
+  /* ── Navigation ── */
   .nav-links { display: none !important; }
-  .nav-cta .btn-ghost:not(:last-child) { display: none !important; }
+  .nav-cta .btn-ghost:first-child { display: none !important; }
+
+  /* ── Hero ── */
   .hero { padding: 100px 20px 60px !important; }
-  .hero h1 { font-size: 34px !important; letter-spacing: -1px !important; }
-  .hero p { font-size: 15px !important; }
-  .hero-btns { flex-direction: column !important; gap: 10px !important; width: 100% !important; }
-  .hero-btns a, .hero-btns button { width: 100% !important; text-align: center !important; box-sizing: border-box !important; }
+  .hero h1 { font-size: 32px !important; letter-spacing: -1px !important; }
+  .hero .lead, .hero p { font-size: 15px !important; }
+  .hero-btns { flex-direction: column !important; gap: 10px !important; }
+  .hero-btns a, .hero-btns button { width: 100% !important; text-align: center !important; }
+
+  /* ── Sections générales ── */
   section { padding: 60px 20px !important; }
-  h2 { font-size: 26px !important; }
-  .features-grid, .how-grid { grid-template-columns: 1fr !important; }
+  .section-header h2, .section-title { font-size: 26px !important; }
+
+  /* ── Grilles → 1 colonne ── */
+  .features-grid { grid-template-columns: 1fr !important; gap: 12px !important; }
   .pricing-grid { grid-template-columns: 1fr !important; gap: 14px !important; }
   .plan-card { transform: none !important; }
-  .phones-wrap, .phone-showcase { display: none !important; }
-  .how-steps { flex-direction: column !important; }
-  .how-arrow { display: none !important; }
-  .logos-bar { gap: 16px !important; flex-wrap: wrap !important; justify-content: center !important; }
-  #videoWrap { border-radius: 12px !important; }
-  footer { padding: 40px 20px !important; }
   .footer-grid { grid-template-columns: 1fr 1fr !important; gap: 20px !important; }
-  .footer-brand { grid-column: 1/-1 !important; }
-  /* Dashboard mobile */
+  .footer-brand { grid-column: 1 / -1 !important; }
+
+  /* ── Masquer éléments desktop ── */
+  .phones-wrap { display: none !important; }
+  .how-arrow { display: none !important; }
+
+  /* ── How it works ── */
+  .how-steps { flex-direction: column !important; align-items: center !important; }
+
+  /* ── Logos ── */
+  .logos-bar { flex-wrap: wrap !important; justify-content: center !important; gap: 16px !important; }
+
+  /* ── Video ── */
+  #videoWrap { border-radius: 12px !important; }
+
+  /* ── Dashboard mobile ── */
   .view-dashboard { flex-direction: column !important; }
-  .sidebar { width: 100% !important; height: auto !important; max-height: 280px !important; position: relative !important; border-right: none !important; border-bottom: 1px solid var(--border) !important; overflow-y: auto !important; }
+  .sidebar {
+    width: 100% !important;
+    height: auto !important;
+    max-height: 260px !important;
+    position: relative !important;
+    border-right: none !important;
+    border-bottom: 1px solid rgba(255,255,255,0.08) !important;
+    overflow-y: auto !important;
+  }
   .main { margin-left: 0 !important; }
-  .topbar { padding: 14px 16px !important; flex-wrap: wrap !important; gap: 8px !important; }
+  .topbar { padding: 12px 16px !important; gap: 8px !important; }
   .topbar-title { font-size: 16px !important; }
   .topbar-sub { display: none !important; }
   .kpis { grid-template-columns: 1fr 1fr !important; gap: 10px !important; }
-  .kpi-card { padding: 14px !important; }
-  .kpi-value { font-size: 26px !important; }
+  .kpi-value { font-size: 24px !important; }
   .panels-grid { grid-template-columns: 1fr !important; }
-  .clients-table th:nth-child(n+4), .clients-table td:nth-child(n+4) { display: none !important; }
-  .podium { gap: 8px !important; }
+  .clients-table th:nth-child(n+5),
+  .clients-table td:nth-child(n+5) { display: none !important; }
+  .settings-dropdown { right: 0 !important; min-width: 200px !important; }
+
+  /* ── Modal auth ── */
+  .modal-box { margin: 16px !important; max-height: 90vh !important; overflow-y: auto !important; }
+
+  /* ── Abonnement ── */
   #subscriptionView > div { padding: 20px 16px !important; }
-  #subscriptionView > div > div:nth-child(3) { grid-template-columns: 1fr !important; }
-  .settings-dropdown { right: -60px !important; }
+  #subscriptionView > div > div:last-child { grid-template-columns: 1fr !important; }
 }
+
 @media (max-width: 480px) {
-  .hero h1 { font-size: 28px !important; }
+  .hero h1 { font-size: 26px !important; }
   .kpis { grid-template-columns: 1fr !important; }
-  .nav-logo { height: 32px !important; }
+  .nav-logo img { height: 30px !important; }
 }
 
 </style>
