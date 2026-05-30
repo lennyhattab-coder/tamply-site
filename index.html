@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+﻿﻿<!DOCTYPE html>
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
@@ -649,6 +649,247 @@ footer {
   .cta-card { padding: 56px 28px; }
   footer { padding: 48px 24px 32px; }
 }
+
+/* ════ 3D SCREENSHOT CAROUSEL ════ */
+.carousel-wrap {
+  position: relative;
+  width: 100%;
+  max-width: 920px;
+  margin: 40px auto 0;
+  animation: fadeUp 0.9s 0.3s ease both;
+}
+.carousel-viewport {
+  position: relative;
+  height: 560px;
+  perspective: 1400px;
+  perspective-origin: 50% 50%;
+}
+.carousel-track {
+  position: absolute;
+  inset: 0;
+}
+.carousel-item {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 240px;
+  height: 500px;
+  transition: transform 500ms cubic-bezier(0.25,0.46,0.45,0.94),
+              opacity 500ms cubic-bezier(0.25,0.46,0.45,0.94);
+  cursor: pointer;
+  will-change: transform, opacity;
+}
+.c-phone-frame {
+  width: 100%;
+  height: 100%;
+  border-radius: 36px;
+  background: #1A1A2E;
+  border: 4px solid #2A2A4A;
+  overflow: hidden;
+  position: relative;
+}
+.c-phone-notch {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 80px;
+  height: 24px;
+  background: #0A091C;
+  border-radius: 0 0 18px 18px;
+  z-index: 3;
+}
+.c-phone-notch::before {
+  content: '';
+  position: absolute;
+  top: 5px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 50px;
+  height: 12px;
+  background: #000;
+  border-radius: 8px;
+}
+.c-phone-screen {
+  position: absolute;
+  inset: 0;
+  border-radius: 32px;
+  overflow: hidden;
+}
+.c-phone-screen img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top;
+  display: block;
+  pointer-events: none;
+  -webkit-user-drag: none;
+  user-select: none;
+}
+.carousel-item[data-pos="0"] {
+  transform: translate(-50%, -50%) scale(1) rotateY(0deg);
+  z-index: 5;
+  opacity: 1;
+}
+.carousel-item[data-pos="0"] .c-phone-frame {
+  box-shadow: 0 40px 80px rgba(79,70,229,0.4);
+}
+.carousel-item[data-pos="1"] {
+  transform: translate(calc(-50% + 200px), -50%) scale(0.75) rotateY(-25deg);
+  z-index: 4;
+  opacity: 0.6;
+}
+.carousel-item[data-pos="-1"] {
+  transform: translate(calc(-50% - 200px), -50%) scale(0.75) rotateY(25deg);
+  z-index: 4;
+  opacity: 0.6;
+}
+.carousel-item[data-pos="2"] {
+  transform: translate(calc(-50% + 340px), -50%) scale(0.5) rotateY(-35deg);
+  z-index: 3;
+  opacity: 0.3;
+}
+.carousel-item[data-pos="-2"] {
+  transform: translate(calc(-50% - 340px), -50%) scale(0.5) rotateY(35deg);
+  z-index: 3;
+  opacity: 0.3;
+}
+.carousel-item[data-pos="3"] {
+  transform: translate(-50%, -50%) scale(0.35);
+  z-index: 1;
+  opacity: 0;
+  pointer-events: none;
+}
+.carousel-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.12);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 10;
+  transition: all 0.2s;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+.carousel-btn:hover { background: rgba(255,255,255,0.14); border-color: rgba(255,255,255,0.28); }
+.carousel-btn-prev { left: 0; }
+.carousel-btn-next { right: 0; }
+.carousel-dots { display: flex; justify-content: center; gap: 6px; margin-top: 20px; }
+.carousel-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.2);
+  transition: all 0.3s;
+  cursor: pointer;
+  border: none;
+  padding: 0;
+}
+.carousel-dot.active { width: 20px; border-radius: 3px; background: var(--p2); }
+
+/* ════ VIDEO PHONE MOCKUP ════ */
+.video-phone-outer {
+  position: relative;
+  margin-top: 56px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.video-phone-body {
+  position: relative;
+  width: 300px;
+  height: 620px;
+  background: #0A0A1A;
+  border-radius: 48px;
+  border: 6px solid #1E1E35;
+  box-shadow: 0 60px 120px rgba(79,70,229,0.5),
+              inset 0 1px 0 rgba(255,255,255,0.08),
+              inset 0 -1px 0 rgba(255,255,255,0.04);
+  transform: perspective(1200px) rotateY(-8deg) rotateX(4deg);
+  transition: transform 0.6s cubic-bezier(0.23,1,0.32,1);
+}
+.video-phone-body:hover {
+  transform: perspective(1200px) rotateY(-3deg) rotateX(1deg) scale(1.02);
+}
+.video-phone-island {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100px;
+  height: 28px;
+  background: #000;
+  border-radius: 20px;
+  z-index: 5;
+}
+.vp-btn-vol-up,
+.vp-btn-vol-down {
+  position: absolute;
+  left: -9px;
+  width: 4px;
+  background: #1E1E35;
+  border-radius: 2px 0 0 2px;
+}
+.vp-btn-vol-up { top: 110px; height: 36px; }
+.vp-btn-vol-down { top: 158px; height: 36px; }
+.vp-btn-power {
+  position: absolute;
+  right: -9px;
+  top: 130px;
+  width: 4px;
+  height: 60px;
+  background: #1E1E35;
+  border-radius: 0 2px 2px 0;
+}
+.video-phone-screen {
+  position: absolute;
+  inset: 6px;
+  border-radius: 42px;
+  overflow: hidden;
+  background: #000;
+}
+.video-phone-screen video { width: 100%; height: 100%; display: block; object-fit: cover; }
+#videoOverlay {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(0,0,0,0.35); cursor: pointer; transition: opacity 0.3s;
+  border-radius: 42px;
+}
+.video-phone-glow {
+  position: absolute;
+  bottom: -80px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 400px;
+  height: 120px;
+  background: radial-gradient(ellipse, rgba(79,70,229,0.35), transparent 70%);
+  filter: blur(30px);
+  pointer-events: none;
+}
+
+@media (max-width: 640px) {
+  .carousel-viewport { height: 420px; perspective: 800px; }
+  .carousel-item { width: 170px; height: 360px; }
+  .carousel-item[data-pos="1"] { transform: translate(calc(-50% + 120px), -50%) scale(0.7) rotateY(-20deg); opacity: 0.5; }
+  .carousel-item[data-pos="-1"] { transform: translate(calc(-50% - 120px), -50%) scale(0.7) rotateY(20deg); opacity: 0.5; }
+  .carousel-item[data-pos="2"],
+  .carousel-item[data-pos="-2"] { opacity: 0; pointer-events: none; }
+  .c-phone-frame { border-radius: 28px; }
+  .c-phone-screen { border-radius: 24px; }
+  .carousel-btn { display: none; }
+  .video-phone-body { width: 240px; height: 500px; border-radius: 36px; transform: perspective(800px) rotateY(-4deg) rotateX(2deg); }
+  .video-phone-screen { border-radius: 30px; }
+  #videoOverlay { border-radius: 30px; }
+  .video-phone-island { width: 80px; height: 22px; }
+}
 </style>
 <script type="module" src="https://cdn.jsdelivr.net/npm/ionicons@7/dist/ionicons/ionicons.esm.js"></script>
 <script nomodule src="https://cdn.jsdelivr.net/npm/ionicons@7/dist/ionicons/ionicons.js"></script>
@@ -721,69 +962,67 @@ footer {
     </a>
   </div>
 
-  <!-- 3D Phone Mockup -->
-  <div class="hero-phone-wrap">
-    <div class="hero-phone-3d" id="heroPhone3D">
-      <div class="hero-phone-frame">
-        <div class="hero-phone-notch"></div>
-        <div class="hero-phone-screen">
-          <div class="psc-header">
-            <div class="psc-av"></div>
-            <div class="psc-greet">
-              <span class="psc-hi">Bonjour 👋</span>
-              <span class="psc-name">Alex</span>
-            </div>
-            <div class="psc-notif">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#6366F1" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-            </div>
-          </div>
-          <div class="psc-stories">
-            <div class="psc-story-ring"><div class="psc-story-inner" style="background:linear-gradient(135deg,#FF6B35,#F5B800)"></div></div>
-            <div class="psc-story-ring"><div class="psc-story-inner" style="background:linear-gradient(135deg,#4F46E5,#A78BFA)"></div></div>
-            <div class="psc-story-ring seen"><div class="psc-story-inner" style="background:#222"></div></div>
-            <div class="psc-story-ring"><div class="psc-story-inner" style="background:linear-gradient(135deg,#00C896,#4F46E5)"></div></div>
-          </div>
-          <div class="psc-card">
-            <div class="psc-card-header">
-              <div class="psc-card-logo"></div>
-              <div class="psc-card-info">
-                <div class="psc-card-name">Café du Marché</div>
-                <div class="psc-card-type">Cafétéria</div>
-              </div>
-              <div class="psc-ligue">Or</div>
-            </div>
-            <div class="psc-stamps">
-              <div class="psc-stamp on"></div>
-              <div class="psc-stamp on"></div>
-              <div class="psc-stamp on"></div>
-              <div class="psc-stamp on"></div>
-              <div class="psc-stamp on"></div>
-              <div class="psc-stamp on"></div>
-              <div class="psc-stamp on"></div>
-              <div class="psc-stamp on"></div>
-              <div class="psc-stamp"></div>
-              <div class="psc-stamp"></div>
-            </div>
-          </div>
-          <div class="psc-bottom">
-            <div class="psc-stat">
-              <div class="psc-stat-n">8</div>
-              <div class="psc-stat-l">tampons</div>
-            </div>
-            <div class="psc-stat2">
-              <div class="psc-stat2-n">Or</div>
-              <div class="psc-stat-l">ligue</div>
+  <!-- 3D Screenshot Carousel -->
+  <div class="carousel-wrap">
+    <div class="carousel-viewport" id="carouselViewport">
+      <div class="carousel-track" id="carouselTrack">
+        <div class="carousel-item" data-index="0">
+          <div class="c-phone-frame">
+            <div class="c-phone-notch"></div>
+            <div class="c-phone-screen">
+              <img src="https://zqjquwrksltnknbvbgjb.supabase.co/storage/v1/object/public/commercants-photos/screenshots/IMG_3034_apple.png" alt="Accueil client" loading="lazy">
             </div>
           </div>
         </div>
-        <div class="psc-phone-tabs">
-          <div class="psc-tab active"><div class="psc-tab-dot"></div><span class="psc-tab-label">Cartes</span></div>
-          <div class="psc-tab"><div class="psc-tab-dot" style="background:#333"></div><span class="psc-tab-label">Explorer</span></div>
-          <div class="psc-tab"><div class="psc-tab-dot" style="background:#333"></div><span class="psc-tab-label">Actus</span></div>
-          <div class="psc-tab"><div class="psc-tab-dot" style="background:#333"></div><span class="psc-tab-label">Profil</span></div>
+        <div class="carousel-item" data-index="1">
+          <div class="c-phone-frame">
+            <div class="c-phone-notch"></div>
+            <div class="c-phone-screen">
+              <img src="https://zqjquwrksltnknbvbgjb.supabase.co/storage/v1/object/public/commercants-photos/screenshots/IMG_3037_apple.png" alt="QR Code" loading="lazy">
+            </div>
+          </div>
+        </div>
+        <div class="carousel-item" data-index="2">
+          <div class="c-phone-frame">
+            <div class="c-phone-notch"></div>
+            <div class="c-phone-screen">
+              <img src="https://zqjquwrksltnknbvbgjb.supabase.co/storage/v1/object/public/commercants-photos/screenshots/IMG_3036_apple.png" alt="Récompenses" loading="lazy">
+            </div>
+          </div>
+        </div>
+        <div class="carousel-item" data-index="3">
+          <div class="c-phone-frame">
+            <div class="c-phone-notch"></div>
+            <div class="c-phone-screen">
+              <img src="https://zqjquwrksltnknbvbgjb.supabase.co/storage/v1/object/public/commercants-photos/screenshots/IMG_3038_apple.png" alt="Dashboard" loading="lazy">
+            </div>
+          </div>
+        </div>
+        <div class="carousel-item" data-index="4">
+          <div class="c-phone-frame">
+            <div class="c-phone-notch"></div>
+            <div class="c-phone-screen">
+              <img src="https://zqjquwrksltnknbvbgjb.supabase.co/storage/v1/object/public/commercants-photos/screenshots/IMG_3039_apple.png" alt="Ligues" loading="lazy">
+            </div>
+          </div>
+        </div>
+        <div class="carousel-item" data-index="5">
+          <div class="c-phone-frame">
+            <div class="c-phone-notch"></div>
+            <div class="c-phone-screen">
+              <img src="https://zqjquwrksltnknbvbgjb.supabase.co/storage/v1/object/public/commercants-photos/screenshots/screenshot_6_explorer__1__apple.png" alt="Explorer" loading="lazy">
+            </div>
+          </div>
         </div>
       </div>
+      <button class="carousel-btn carousel-btn-prev" id="carouselPrev" aria-label="Précédent">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      <button class="carousel-btn carousel-btn-next" id="carouselNext" aria-label="Suivant">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
     </div>
+    <div class="carousel-dots" id="carouselDots"></div>
     <div class="hero-phone-glow"></div>
   </div>
 </section>
@@ -875,14 +1114,17 @@ footer {
     <h2 class="section-title">Voyez par vous-même.</h2>
     <p class="section-desc" style="margin:12px auto 0;text-align:center;max-width:400px">Une démonstration complète de l'expérience Tamply côté client et commerçant.</p>
 
-    <div class="laptop-frame" id="videoWrap">
-      <div class="laptop-top">
-        <div class="laptop-camera"></div>
-        <div class="laptop-screen">
+    <div class="video-phone-outer" id="videoWrap">
+      <div class="video-phone-body">
+        <div class="video-phone-island"></div>
+        <div class="vp-btn-vol-up"></div>
+        <div class="vp-btn-vol-down"></div>
+        <div class="vp-btn-power"></div>
+        <div class="video-phone-screen">
           <video id="tamplyVideo"
             src="https://zqjquwrksltnknbvbgjb.supabase.co/storage/v1/object/public/commercants-photos/TamplyTrailer.mp4"
             muted playsinline loop preload="metadata"
-            style="width:100%;height:100%;display:block;object-fit:contain">
+            style="width:100%;height:100%;display:block;object-fit:cover">
           </video>
           <div id="videoOverlay" onclick="toggleVideo()">
             <div class="play-btn">
@@ -892,9 +1134,7 @@ footer {
           </div>
         </div>
       </div>
-      <div class="laptop-stand"></div>
-      <div class="laptop-base"></div>
-      <div class="laptop-glow"></div>
+      <div class="video-phone-glow"></div>
     </div>
   </div>
 </section>
@@ -5791,5 +6031,103 @@ async function subscribeMobile(plan) {
 </div>
 </div>
 
+<script>
+/* ═══ 3D Carousel ═══ */
+(function() {
+  var TOTAL = 6;
+  var current = 0;
+  var autoTimer = null;
+  var startX = 0;
+  var isDragging = false;
+
+  var track = document.getElementById('carouselTrack');
+  var dotsContainer = document.getElementById('carouselDots');
+  var prevBtn = document.getElementById('carouselPrev');
+  var nextBtn = document.getElementById('carouselNext');
+  var viewport = document.getElementById('carouselViewport');
+
+  if (!track) return;
+
+  // Build dots
+  for (var i = 0; i < TOTAL; i++) {
+    var dot = document.createElement('button');
+    dot.className = 'carousel-dot';
+    dot.setAttribute('data-i', String(i));
+    dot.setAttribute('aria-label', 'Screenshot ' + (i + 1));
+    (function(idx) {
+      dot.addEventListener('click', function() { goTo(idx); stopAuto(); startAuto(); });
+    })(i);
+    dotsContainer.appendChild(dot);
+  }
+
+  function updatePositions() {
+    var items = track.querySelectorAll('.carousel-item');
+    items.forEach(function(item) {
+      var idx = parseInt(item.getAttribute('data-index'), 10);
+      var pos = ((idx - current) % TOTAL + TOTAL) % TOTAL;
+      if (pos > TOTAL / 2) pos = pos - TOTAL;
+      item.setAttribute('data-pos', String(pos));
+    });
+    var dots = dotsContainer.querySelectorAll('.carousel-dot');
+    dots.forEach(function(dot) {
+      dot.classList.toggle('active', parseInt(dot.getAttribute('data-i'), 10) === current);
+    });
+  }
+
+  function goTo(idx) {
+    current = ((idx % TOTAL) + TOTAL) % TOTAL;
+    updatePositions();
+  }
+
+  function next() { goTo(current + 1); }
+  function prev() { goTo(current - 1); }
+
+  function startAuto() {
+    stopAuto();
+    autoTimer = setInterval(next, 3000);
+  }
+
+  function stopAuto() {
+    if (autoTimer) { clearInterval(autoTimer); autoTimer = null; }
+  }
+
+  // Click lateral items to center them
+  track.addEventListener('click', function(e) {
+    var item = e.target.closest('.carousel-item');
+    if (!item) return;
+    var pos = parseInt(item.getAttribute('data-pos'), 10);
+    if (pos !== 0) { goTo(current + pos); stopAuto(); startAuto(); }
+  });
+
+  // Arrow buttons
+  if (prevBtn) prevBtn.addEventListener('click', function() { prev(); stopAuto(); startAuto(); });
+  if (nextBtn) nextBtn.addEventListener('click', function() { next(); stopAuto(); startAuto(); });
+
+  // Pause on hover
+  viewport.addEventListener('mouseenter', stopAuto);
+  viewport.addEventListener('mouseleave', startAuto);
+
+  // Touch swipe
+  viewport.addEventListener('touchstart', function(e) {
+    startX = e.touches[0].clientX;
+    isDragging = true;
+    stopAuto();
+  }, { passive: true });
+
+  viewport.addEventListener('touchend', function(e) {
+    if (!isDragging) return;
+    var dx = e.changedTouches[0].clientX - startX;
+    if (Math.abs(dx) > 40) { if (dx < 0) next(); else prev(); }
+    isDragging = false;
+    startAuto();
+  }, { passive: true });
+
+  // Init
+  updatePositions();
+  startAuto();
+})();
+</script>
+
 </body>
 </html>
+
