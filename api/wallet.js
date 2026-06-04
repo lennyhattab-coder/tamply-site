@@ -156,14 +156,22 @@ async function genererPkpass(params) {
       }
     });
 
-    console.log('[wallet] pass.generate type:', typeof pass.generate);
+    console.log('[wallet] pass type:', typeof pass, '| generate:', typeof pass.generate, '| pipe:', typeof pass.pipe, '| getReader:', typeof pass.getReader);
 
+    // PKPass instance avec .generate() → Node.js ReadableStream
     if (typeof pass.generate === 'function') {
       return await streamToBuffer(pass.generate());
     }
+    // Buffer direct
     if (Buffer.isBuffer(pass)) return pass;
+    // Node.js Readable stream (.pipe)
     if (pass && typeof pass.pipe === 'function') return await streamToBuffer(pass);
-    throw new Error('passkit-generator: API inattendue — impossible de récupérer le buffer');
+    // Web Streams ReadableStream (v3.3.0 retourne ça) — async iterable en Node 18+
+    const chunks = [];
+    for await (const chunk of pass) {
+      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+    }
+    return Buffer.concat(chunks);
 
   } finally {
     fs.rmSync(tempDir, { recursive: true, force: true });
