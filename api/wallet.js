@@ -156,7 +156,7 @@ async function genererPkpass(params) {
       }
     });
 
-    console.log('[wallet] pass type:', typeof pass, '| generate:', typeof pass.generate, '| pipe:', typeof pass.pipe, '| getReader:', typeof pass.getReader);
+    console.log('[wallet] pass constructor:', pass?.constructor?.name, '| length:', pass?.length, '| byteLength:', pass?.byteLength, '| generate:', typeof pass.generate);
 
     // PKPass instance avec .generate() → Node.js ReadableStream
     if (typeof pass.generate === 'function') {
@@ -164,14 +164,17 @@ async function genererPkpass(params) {
     }
     // Buffer direct
     if (Buffer.isBuffer(pass)) return pass;
-    // Node.js Readable stream (.pipe)
+    // Uint8Array ou tout ArrayBufferView (pkpass bytes directs depuis PKPass.from())
+    if (ArrayBuffer.isView(pass)) return Buffer.from(pass.buffer, pass.byteOffset, pass.byteLength);
+    // Node.js Readable (.pipe)
     if (pass && typeof pass.pipe === 'function') return await streamToBuffer(pass);
-    // Web Streams ReadableStream (v3.3.0 retourne ça) — async iterable en Node 18+
-    const chunks = [];
-    for await (const chunk of pass) {
-      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+    // Async iterable (Web ReadableStream Node 18+)
+    if (pass && pass[Symbol.asyncIterator]) {
+      const chunks = [];
+      for await (const chunk of pass) chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+      return Buffer.concat(chunks);
     }
-    return Buffer.concat(chunks);
+    throw new Error(`passkit-generator: type inattendu "${pass?.constructor?.name}" — impossible de récupérer le buffer`);
 
   } finally {
     fs.rmSync(tempDir, { recursive: true, force: true });
