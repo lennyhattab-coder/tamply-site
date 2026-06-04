@@ -55,10 +55,16 @@ async function genererPkpass(params) {
   const tamponsEmpty = '○'.repeat(restants);
   const tamponsVisuel = tamponsFilled + tamponsEmpty;
 
-  // couleur_hex pour canvas (avec #), backgroundColor pour passJson (rgb)
-  const couleur_hex = couleur && /^#?[0-9a-f]{6}$/i.test(couleur.replace(/^#/, ''))
-    ? (couleur.startsWith('#') ? couleur : `#${couleur}`)
-    : '#4F46E5';
+  // Couleur parsée en RGB pour sharp (fallback strip colorée)
+  const couleurRgb = { r: 79, g: 70, b: 229 };
+  if (couleur) {
+    const clean = couleur.replace(/^#/, '');
+    if (/^[0-9a-f]{6}$/i.test(clean)) {
+      couleurRgb.r = parseInt(clean.slice(0, 2), 16);
+      couleurRgb.g = parseInt(clean.slice(2, 4), 16);
+      couleurRgb.b = parseInt(clean.slice(4, 6), 16);
+    }
+  }
 
   let backgroundColor = 'rgb(79, 70, 229)';
   if (couleur) {
@@ -148,63 +154,39 @@ async function genererPkpass(params) {
       }
     });
 
-    // strip.png : photo pleine largeur (type coupon) — 750x246 px (2x)
+    // strip.png : photo pleine largeur (type coupon) — sharp compatible Vercel
+    const sharp = require('sharp');
+    const stripFallback = async (w, h) => sharp({
+      create: { width: w, height: h, channels: 3, background: couleurRgb }
+    }).png().toBuffer();
+
     if (photo_url) {
       try {
-        const { createCanvas, loadImage } = require('canvas');
-
         const imgResp = await fetch(photo_url, { signal: AbortSignal.timeout(5000) });
         if (imgResp.ok) {
           const imgBuf = Buffer.from(await imgResp.arrayBuffer());
-          const img = await loadImage(imgBuf);
-
-          const canvas = createCanvas(750, 246);
-          const ctx = canvas.getContext('2d');
-
-          // Fond couleur du commerce
-          ctx.fillStyle = couleur_hex;
-          ctx.fillRect(0, 0, 750, 246);
-
-          // Photo en cover (centré, recadré)
-          const scale = Math.max(750 / img.width, 246 / img.height);
-          const w = img.width * scale;
-          const h = img.height * scale;
-          const x = (750 - w) / 2;
-          const y = (246 - h) / 2;
-          ctx.drawImage(img, x, y, w, h);
-
-          const stripBuf = canvas.toBuffer('image/png');
-          pass.addBuffer('strip.png', stripBuf);
-          pass.addBuffer('strip@2x.png', stripBuf);
-          console.log('[wallet] Strip image ajoutée:', stripBuf.length, 'bytes');
+          const strip1x = await sharp(imgBuf).resize(375, 123, { fit: 'cover' }).png().toBuffer();
+          const strip2x = await sharp(imgBuf).resize(750, 246, { fit: 'cover' }).png().toBuffer();
+          pass.addBuffer('strip.png', strip1x);
+          pass.addBuffer('strip@2x.png', strip2x);
+          console.log('[wallet] Strip image ajoutée avec sharp');
+        } else {
+          pass.addBuffer('strip.png', await stripFallback(375, 123));
+          pass.addBuffer('strip@2x.png', await stripFallback(750, 246));
         }
       } catch (e) {
         console.warn('[wallet] Strip échoué:', e.message);
-        // Fallback : strip colorée sans image
         try {
-          const { createCanvas } = require('canvas');
-          const canvas = createCanvas(750, 246);
-          const ctx = canvas.getContext('2d');
-          ctx.fillStyle = couleur_hex;
-          ctx.fillRect(0, 0, 750, 246);
-          const stripBuf = canvas.toBuffer('image/png');
-          pass.addBuffer('strip.png', stripBuf);
-          pass.addBuffer('strip@2x.png', stripBuf);
+          pass.addBuffer('strip.png', await stripFallback(375, 123));
+          pass.addBuffer('strip@2x.png', await stripFallback(750, 246));
         } catch (e2) {
           console.warn('[wallet] Fallback strip échoué:', e2.message);
         }
       }
     } else {
-      // Pas de photo → strip colorée unie
       try {
-        const { createCanvas } = require('canvas');
-        const canvas = createCanvas(750, 246);
-        const ctx = canvas.getContext('2d');
-        ctx.fillStyle = couleur_hex;
-        ctx.fillRect(0, 0, 750, 246);
-        const stripBuf = canvas.toBuffer('image/png');
-        pass.addBuffer('strip.png', stripBuf);
-        pass.addBuffer('strip@2x.png', stripBuf);
+        pass.addBuffer('strip.png', await stripFallback(375, 123));
+        pass.addBuffer('strip@2x.png', await stripFallback(750, 246));
       } catch (e) {
         console.warn('[wallet] Strip colorée échouée:', e.message);
       }
