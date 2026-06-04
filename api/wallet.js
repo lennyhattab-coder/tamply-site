@@ -33,6 +33,26 @@ function streamToBuffer(stream) {
   });
 }
 
+function genererTampons(pts, mx) {
+  const filled = Math.min(pts, mx);
+  const cols = mx <= 5 ? mx : Math.ceil(mx / 2);
+  const rows = Math.ceil(mx / cols);
+  let result = '';
+  for (let row = 0; row < rows; row++) {
+    let line = '';
+    for (let col = 0; col < cols; col++) {
+      const index = row * cols + col;
+      if (index < mx) {
+        line += index < filled ? '●' : '○';
+        if (col < cols - 1 && index < mx - 1) line += ' ';
+      }
+    }
+    result += line;
+    if (row < rows - 1) result += '\n';
+  }
+  return result;
+}
+
 async function genererPkpass(params) {
   const {
     user_id, commercant_id, nom_commerce,
@@ -51,9 +71,6 @@ async function genererPkpass(params) {
   const pts = parseInt(points) || 0;
   const mx = parseInt(max) || 10;
   const restants = Math.max(0, mx - pts);
-  const tamponsFilled = '●'.repeat(Math.min(pts, mx));
-  const tamponsEmpty = '○'.repeat(restants);
-  const tamponsVisuel = tamponsFilled + tamponsEmpty;
 
   // Couleur parsée en RGB pour sharp (fallback strip colorée)
   const couleurRgb = { r: 79, g: 70, b: 229 };
@@ -92,7 +109,7 @@ async function genererPkpass(params) {
       primaryFields: [{
         key: 'tampons',
         label: 'Progression',
-        value: tamponsVisuel
+        value: genererTampons(pts, mx)
       }],
       secondaryFields: [
         { key: 'commerce', label: 'Commerce', value: nom_commerce || '' },
