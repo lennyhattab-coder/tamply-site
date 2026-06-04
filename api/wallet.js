@@ -33,6 +33,30 @@ function streamToBuffer(stream) {
   });
 }
 
+function genererTampons(points, max) {
+  const filled = Math.min(points, max);
+  const total = max;
+
+  let cols;
+  if (total <= 5) cols = total;
+  else if (total <= 20) cols = Math.ceil(total / 2);
+  else cols = Math.ceil(total / 3);
+
+  const rows = Math.ceil(total / cols);
+
+  let result = '';
+  for (let row = 0; row < rows; row++) {
+    let line = '';
+    for (let col = 0; col < cols; col++) {
+      const index = row * cols + col;
+      if (index < total) line += index < filled ? '●' : '○';
+    }
+    result += line;
+    if (row < rows - 1) result += '\n';
+  }
+  return result;
+}
+
 async function genererPkpass(params) {
   const {
     user_id, commercant_id, nom_commerce,
@@ -51,12 +75,18 @@ async function genererPkpass(params) {
   const pts = parseInt(points) || 0;
   const mx = parseInt(max) || 10;
   const restants = Math.max(0, mx - pts);
-  const tamponsFilled = '●'.repeat(Math.min(pts, mx));
-  const tamponsEmpty = '○'.repeat(restants);
-  const tamponsVisuel = tamponsFilled + tamponsEmpty;
 
-  // Couleur parsée en RGB pour sharp (fallback strip colorée)
-  const couleurRgb = { r: 79, g: 70, b: 229 };
+  // Valeur affichée selon le système
+  let primaryValue;
+  if (systeme === 'points') {
+    const pct = Math.round((pts / mx) * 10);
+    primaryValue = `${'█'.repeat(pct)}${'░'.repeat(10 - pct)} ${pts}/${mx}`;
+  } else {
+    primaryValue = genererTampons(pts, mx);
+  }
+
+  // Couleur parsée en RGB (gris foncé par défaut)
+  const couleurRgb = { r: 45, g: 45, b: 55 };
   if (couleur) {
     const clean = couleur.replace(/^#/, '');
     if (/^[0-9a-f]{6}$/i.test(clean)) {
@@ -66,16 +96,7 @@ async function genererPkpass(params) {
     }
   }
 
-  let backgroundColor = 'rgb(79, 70, 229)';
-  if (couleur) {
-    const clean = couleur.replace(/^#/, '');
-    if (/^[0-9a-f]{6}$/i.test(clean)) {
-      const r = parseInt(clean.slice(0, 2), 16);
-      const g = parseInt(clean.slice(2, 4), 16);
-      const b = parseInt(clean.slice(4, 6), 16);
-      backgroundColor = `rgb(${r}, ${g}, ${b})`;
-    }
-  }
+  const backgroundColor = `rgb(${couleurRgb.r}, ${couleurRgb.g}, ${couleurRgb.b})`;
 
   const passJson = {
     formatVersion: 1,
@@ -92,7 +113,7 @@ async function genererPkpass(params) {
       primaryFields: [{
         key: 'tampons',
         label: 'Progression',
-        value: tamponsVisuel
+        value: primaryValue
       }],
       secondaryFields: [
         { key: 'commerce', label: 'Commerce', value: nom_commerce || '' },
@@ -154,22 +175,40 @@ async function genererPkpass(params) {
       }
     });
 
-    // strip.png : photo pleine largeur (type coupon) — sharp compatible Vercel
     const sharp = require('sharp');
+
+    // Helper strip colorée unie (fallback sans photo)
     const stripFallback = async (w, h) => sharp({
-      create: { width: w, height: h, channels: 3, background: couleurRgb }
+      create: { width: w, height: h, channels: 4, background: { ...couleurRgb, alpha: 1 } }
     }).png().toBuffer();
+
+    // Helper strip avec photo (fit: inside centré sur fond couleur)
+    const stripAvecPhoto = async (imgBuf, w, h) => sharp({
+      create: { width: w, height: h, channels: 4, background: { ...couleurRgb, alpha: 1 } }
+    }).composite([{
+      input: await sharp(imgBuf).resize(w, h, { fit: 'inside' }).toBuffer(),
+      gravity: 'center'
+    }]).png().toBuffer();
 
     if (photo_url) {
       try {
         const imgResp = await fetch(photo_url, { signal: AbortSignal.timeout(5000) });
         if (imgResp.ok) {
           const imgBuf = Buffer.from(await imgResp.arrayBuffer());
-          const strip1x = await sharp(imgBuf).resize(375, 123, { fit: 'cover' }).png().toBuffer();
-          const strip2x = await sharp(imgBuf).resize(750, 246, { fit: 'cover' }).png().toBuffer();
-          pass.addBuffer('strip.png', strip1x);
-          pass.addBuffer('strip@2x.png', strip2x);
-          console.log('[wallet] Strip image ajoutée avec sharp');
+          pass.addBuffer('strip.png', await stripAvecPhoto(imgBuf, 375, 123));
+          pass.addBuffer('strip@2x.png', await stripAvecPhoto(imgBuf, 750, 246));
+          console.log('[wallet] Strip image ajoutée (fit: inside)');
+
+          // Logo : photo redimensionnée en 160x50 (1x) / 320x100 (2x)
+          try {
+            const logo1x = await sharp(imgBuf).resize(160, 50, { fit: 'inside' }).png().toBuffer();
+            const logo2x = await sharp(imgBuf).resize(320, 100, { fit: 'inside' }).png().toBuffer();
+            pass.addBuffer('logo.png', logo1x);
+            pass.addBuffer('logo@2x.png', logo2x);
+            console.log('[wallet] Logo ajouté');
+          } catch (e) {
+            console.warn('[wallet] Logo échoué:', e.message);
+          }
         } else {
           pass.addBuffer('strip.png', await stripFallback(375, 123));
           pass.addBuffer('strip@2x.png', await stripFallback(750, 246));
