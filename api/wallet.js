@@ -156,7 +156,9 @@ async function genererPkpass(params) {
       }
     });
 
-    console.log('[wallet] pass constructor:', pass?.constructor?.name, '| length:', pass?.length, '| byteLength:', pass?.byteLength, '| generate:', typeof pass.generate);
+    const proto = Object.getPrototypeOf(pass);
+    const protoMethods = Object.getOwnPropertyNames(proto).join(', ');
+    console.log('[wallet] PKPass constructor:', pass?.constructor?.name, '| proto methods:', protoMethods);
 
     // PKPass instance avec .generate() → Node.js ReadableStream
     if (typeof pass.generate === 'function') {
