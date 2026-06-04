@@ -156,27 +156,8 @@ async function genererPkpass(params) {
       }
     });
 
-    const proto = Object.getPrototypeOf(pass);
-    const protoMethods = Object.getOwnPropertyNames(proto).join(', ');
-    console.log('[wallet] PKPass constructor:', pass?.constructor?.name, '| proto methods:', protoMethods);
-
-    // PKPass instance avec .generate() → Node.js ReadableStream
-    if (typeof pass.generate === 'function') {
-      return await streamToBuffer(pass.generate());
-    }
-    // Buffer direct
-    if (Buffer.isBuffer(pass)) return pass;
-    // Uint8Array ou tout ArrayBufferView (pkpass bytes directs depuis PKPass.from())
-    if (ArrayBuffer.isView(pass)) return Buffer.from(pass.buffer, pass.byteOffset, pass.byteLength);
-    // Node.js Readable (.pipe)
-    if (pass && typeof pass.pipe === 'function') return await streamToBuffer(pass);
-    // Async iterable (Web ReadableStream Node 18+)
-    if (pass && pass[Symbol.asyncIterator]) {
-      const chunks = [];
-      for await (const chunk of pass) chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
-      return Buffer.concat(chunks);
-    }
-    throw new Error(`passkit-generator: type inattendu "${pass?.constructor?.name}" — impossible de récupérer le buffer`);
+    // passkit-generator v3.3.0 : getAsBuffer() (pas generate())
+    return await pass.getAsBuffer();
 
   } finally {
     fs.rmSync(tempDir, { recursive: true, force: true });
