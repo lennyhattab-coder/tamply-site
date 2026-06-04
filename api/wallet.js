@@ -1,4 +1,4 @@
-const { PKPass } = require('passkit-generator');
+// passkit-generator est ESM-only — import() dynamique obligatoire (pas require())
 const forge = require('node-forge');
 const fs = require('fs');
 const path = require('path');
@@ -44,6 +44,9 @@ async function genererPkpass(params) {
   const password = process.env.APPLE_PASS_CERTIFICATE_PASSWORD;
   console.log('[wallet] Cert présent:', !!p12b64, '| Password présent:', !!password);
   if (!p12b64) throw new Error('Certificat manquant');
+
+  // Import ESM dynamique — obligatoire car passkit-generator est ESM-only
+  const { PKPass } = await import('passkit-generator');
 
   const pts = parseInt(points) || 0;
   const mx = parseInt(max) || 10;
@@ -126,13 +129,12 @@ async function genererPkpass(params) {
   // Fetch WWDR Apple
   const wwdrResp = await fetch('https://www.apple.com/certificateauthority/AppleWWDRCAG3.cer');
   const wwdrBuffer = Buffer.from(await wwdrResp.arrayBuffer());
-  console.log('[wallet] WWDR size:', wwdrBuffer.length);
 
   // Extraire cert PEM + clé PEM depuis le p12
   const { certPem, keyPem } = extractFromP12(p12b64, password);
-  console.log('[wallet] certPem size:', certPem.length, '| keyPem size:', keyPem.length);
+  console.log('[wallet] certPem:', certPem.length, 'bytes | keyPem:', keyPem.length, 'bytes');
 
-  // Écrire le modèle dans /tmp
+  // Écrire le modèle dans /tmp (seul dossier writable sur Vercel)
   const tempDir = path.join(os.tmpdir(), `tamply_${crypto.randomBytes(8).toString('hex')}.pass`);
   fs.mkdirSync(tempDir, { recursive: true });
 
@@ -144,7 +146,6 @@ async function genererPkpass(params) {
       fs.writeFileSync(path.join(tempDir, 'strip.png'), stripBuffer);
       fs.writeFileSync(path.join(tempDir, 'strip@2x.png'), stripBuffer);
     }
-    console.log('[wallet] tempDir:', tempDir, '| files:', fs.readdirSync(tempDir).join(', '));
 
     const pass = await PKPass.from({
       model: tempDir,
@@ -158,16 +159,14 @@ async function genererPkpass(params) {
       }
     });
 
-    console.log('[wallet] pass type:', typeof pass, '| has generate:', typeof pass.generate);
+    console.log('[wallet] pass.generate type:', typeof pass.generate);
 
-    // Defensive: handle generate() as stream or direct buffer
     if (typeof pass.generate === 'function') {
-      const stream = pass.generate();
-      return await streamToBuffer(stream);
+      return await streamToBuffer(pass.generate());
     }
     if (Buffer.isBuffer(pass)) return pass;
     if (pass && typeof pass.pipe === 'function') return await streamToBuffer(pass);
-    throw new Error('passkit-generator: impossible de récupérer le buffer (API inattendue)');
+    throw new Error('passkit-generator: API inattendue — impossible de récupérer le buffer');
 
   } finally {
     fs.rmSync(tempDir, { recursive: true, force: true });
