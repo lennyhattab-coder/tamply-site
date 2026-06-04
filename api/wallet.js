@@ -152,10 +152,7 @@ async function genererPkpass(params) {
       certificates: {
         wwdr: wwdrBuffer,
         signerCert: certPem,
-        signerKey: {
-          keyFile: keyPem,
-          passphrase: '',
-        },
+        signerKey: keyPem,
       }
     });
 
