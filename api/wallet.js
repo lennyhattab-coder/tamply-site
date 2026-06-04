@@ -16,10 +16,21 @@ function extractFromP12(p12b64, password) {
   const keyBag = keyBags[forge.pki.oids.pkcs8ShroudedKeyBag][0];
   const certBag = certBags[forge.pki.oids.certBag][0];
 
+  if (!keyBag || !certBag) throw new Error('p12: cert ou clé introuvable');
+
   return {
     certPem: Buffer.from(forge.pki.certificateToPem(certBag.cert)),
     keyPem: Buffer.from(forge.pki.privateKeyToPem(keyBag.key)),
   };
+}
+
+function streamToBuffer(stream) {
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    stream.on('data', chunk => chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)));
+    stream.on('end', () => resolve(Buffer.concat(chunks)));
+    stream.on('error', reject);
+  });
 }
 
 async function genererPkpass(params) {
@@ -31,7 +42,7 @@ async function genererPkpass(params) {
 
   const p12b64 = process.env.APPLE_PASS_CERTIFICATE;
   const password = process.env.APPLE_PASS_CERTIFICATE_PASSWORD;
-  console.log('Cert présent:', !!p12b64, 'Password présent:', !!password);
+  console.log('[wallet] Cert présent:', !!p12b64, '| Password présent:', !!password);
   if (!p12b64) throw new Error('Certificat manquant');
 
   const pts = parseInt(points) || 0;
@@ -101,25 +112,27 @@ async function genererPkpass(params) {
   const iconB64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVQI12NgAAIABQAABjkB6QAAAAAASUVORK5CYII=';
   const iconBuffer = Buffer.from(iconB64, 'base64');
 
-  // Fetch strip image (photo du commerce)
+  // Fetch strip image
   let stripBuffer = null;
   if (photo_url) {
     try {
       const resp = await fetch(photo_url, { signal: AbortSignal.timeout(5000) });
       if (resp.ok) stripBuffer = Buffer.from(await resp.arrayBuffer());
     } catch (e) {
-      console.warn('Strip fetch échoué:', e.message);
+      console.warn('[wallet] Strip fetch échoué:', e.message);
     }
   }
 
   // Fetch WWDR Apple
   const wwdrResp = await fetch('https://www.apple.com/certificateauthority/AppleWWDRCAG3.cer');
   const wwdrBuffer = Buffer.from(await wwdrResp.arrayBuffer());
+  console.log('[wallet] WWDR size:', wwdrBuffer.length);
 
   // Extraire cert PEM + clé PEM depuis le p12
   const { certPem, keyPem } = extractFromP12(p12b64, password);
+  console.log('[wallet] certPem size:', certPem.length, '| keyPem size:', keyPem.length);
 
-  // Écrire le modèle dans /tmp (seul dossier writable sur Vercel)
+  // Écrire le modèle dans /tmp
   const tempDir = path.join(os.tmpdir(), `tamply_${crypto.randomBytes(8).toString('hex')}.pass`);
   fs.mkdirSync(tempDir, { recursive: true });
 
@@ -131,20 +144,31 @@ async function genererPkpass(params) {
       fs.writeFileSync(path.join(tempDir, 'strip.png'), stripBuffer);
       fs.writeFileSync(path.join(tempDir, 'strip@2x.png'), stripBuffer);
     }
+    console.log('[wallet] tempDir:', tempDir, '| files:', fs.readdirSync(tempDir).join(', '));
 
     const pass = await PKPass.from({
       model: tempDir,
       certificates: {
         wwdr: wwdrBuffer,
         signerCert: certPem,
-        signerKey: keyPem,
+        signerKey: {
+          keyFile: keyPem,
+          passphrase: '',
+        },
       }
     });
 
-    const stream = pass.generate();
-    const chunks = [];
-    for await (const chunk of stream) chunks.push(chunk);
-    return Buffer.concat(chunks);
+    console.log('[wallet] pass type:', typeof pass, '| has generate:', typeof pass.generate);
+
+    // Defensive: handle generate() as stream or direct buffer
+    if (typeof pass.generate === 'function') {
+      const stream = pass.generate();
+      return await streamToBuffer(stream);
+    }
+    if (Buffer.isBuffer(pass)) return pass;
+    if (pass && typeof pass.pipe === 'function') return await streamToBuffer(pass);
+    throw new Error('passkit-generator: impossible de récupérer le buffer (API inattendue)');
+
   } finally {
     fs.rmSync(tempDir, { recursive: true, force: true });
   }
@@ -183,7 +207,7 @@ module.exports = async (req, res) => {
       res.setHeader('Content-Disposition', 'attachment; filename="tamply.pkpass"');
       return res.status(200).send(buf);
     } catch (e) {
-      console.error('GET wallet error:', e);
+      console.error('[wallet] GET error:', e);
       return res.status(500).json({ error: String(e) });
     }
   }
@@ -193,7 +217,7 @@ module.exports = async (req, res) => {
       const buf = await genererPkpass(req.body);
       return res.status(200).json({ pkpass: buf.toString('base64') });
     } catch (e) {
-      console.error('POST wallet error:', e);
+      console.error('[wallet] POST error:', e);
       return res.status(500).json({ error: String(e) });
     }
   }
