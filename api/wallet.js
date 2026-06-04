@@ -23,12 +23,22 @@ module.exports = async (req, res) => {
     const p12b64 = process.env.APPLE_PASS_CERTIFICATE;
     const password = process.env.APPLE_PASS_CERTIFICATE_PASSWORD;
 
+    console.log('Cert présent:', !!p12b64, 'longueur:', p12b64?.length ?? 0);
+    console.log('Password configuré:', !!password);
+
     if (!p12b64) {
       return res.status(500).json({ error: 'Certificat manquant' });
     }
 
     const label = systeme === 'points' ? 'points' : 'tampons';
-    const restants = Math.max(0, (max || 10) - (points || 0));
+    const ptsCourants = points || 0;
+    const ptsTotaux = max || 10;
+    const restants = Math.max(0, ptsTotaux - ptsCourants);
+
+    // Représentation visuelle des tampons
+    const tamponsFilled = '●'.repeat(Math.min(ptsCourants, ptsTotaux));
+    const tamponsEmpty = '○'.repeat(restants);
+    const tamponsVisuel = tamponsFilled + tamponsEmpty;
 
     const passJson = {
       formatVersion: 1,
@@ -37,41 +47,52 @@ module.exports = async (req, res) => {
       teamIdentifier: 'PSU4H69TXL',
       organizationName: 'Tamply',
       description: `Carte ${nom_commerce} — Tamply`,
-      logoText: 'Tamply',
+      logoText: nom_commerce || 'Tamply',
       foregroundColor: 'rgb(238, 238, 248)',
       backgroundColor: couleur_fond || 'rgb(79, 70, 229)',
       labelColor: 'rgb(200, 200, 220)',
       storeCard: {
         primaryFields: [{
-          key: 'progression',
-          label: label.charAt(0).toUpperCase() + label.slice(1),
-          value: `${points || 0} / ${max || 10}`
+          key: 'tampons',
+          label: 'Progression',
+          value: tamponsVisuel,
         }],
         secondaryFields: [
-          { key: 'commerce', label: 'Commerce', value: nom_commerce },
-          { key: 'ligue', label: 'Ligue', value: ligue || 'Bronze' }
+          { key: 'commerce', label: 'Commerce', value: nom_commerce || '' },
+          { key: 'points', label: `${ptsCourants}/${ptsTotaux}`, value: ligue || 'Bronze' },
         ],
         auxiliaryFields: [{
           key: 'prochaine',
-          label: 'Prochaine récompense',
-          value: restants === 0 ? 'Disponible !' : `Plus que ${restants} ${label}`
+          label: restants === 0
+            ? 'Récompense disponible !'
+            : `Plus que ${restants} tampon${restants > 1 ? 's' : ''}`,
+          value: '',
         }],
-        backFields: [{
-          key: 'info',
-          label: 'À propos',
-          value: 'Scannez votre QR code pour gagner des tampons'
-        }]
+        backFields: [
+          {
+            key: 'qr_info',
+            label: 'Votre QR Code',
+            value: `tamply://wallet/${user_id}/${commercant_id}`,
+          },
+          {
+            key: 'info',
+            label: 'Comment ça marche',
+            value: 'Présentez ce QR code en caisse pour gagner des tampons de fidélité.',
+          },
+        ],
       },
       barcode: {
         message: `tamply://wallet/${user_id}/${commercant_id}`,
         format: 'PKBarcodeFormatQR',
-        messageEncoding: 'iso-8859-1'
+        messageEncoding: 'iso-8859-1',
+        altText: `${nom_commerce || 'Tamply'} — QR Code fidélité`,
       },
       barcodes: [{
         message: `tamply://wallet/${user_id}/${commercant_id}`,
         format: 'PKBarcodeFormatQR',
-        messageEncoding: 'iso-8859-1'
-      }]
+        messageEncoding: 'iso-8859-1',
+        altText: `${nom_commerce || 'Tamply'} — QR Code fidélité`,
+      }],
     };
 
     const passJsonStr = JSON.stringify(passJson, null, 2);
@@ -81,11 +102,11 @@ module.exports = async (req, res) => {
 
     const manifest = {
       'pass.json': crypto.createHash('sha1').update(passJsonStr).digest('hex'),
-      'icon.png': crypto.createHash('sha1').update(iconBytes).digest('hex')
+      'icon.png': crypto.createHash('sha1').update(iconBytes).digest('hex'),
     };
     const manifestStr = JSON.stringify(manifest);
 
-    // Signature PKCS7 avec node-forge (Node.js natif — pas de problème Deno)
+    // Signature PKCS7 avec node-forge
     const p12Der = Buffer.from(p12b64, 'base64').toString('binary');
     const p12Asn1 = forge.asn1.fromDer(p12Der);
     const p12 = forge.pkcs12.pkcs12FromAsn1(p12Asn1, false, password);
@@ -106,13 +127,15 @@ module.exports = async (req, res) => {
       authenticatedAttributes: [
         { type: forge.pki.oids.contentType, value: forge.pki.oids.data },
         { type: forge.pki.oids.messageDigest },
-        { type: forge.pki.oids.signingTime, value: new Date() }
-      ]
+        { type: forge.pki.oids.signingTime, value: new Date() },
+      ],
     });
     p7.sign();
 
     const sigDer = forge.asn1.toDer(p7.toAsn1()).getBytes();
     const sigBuffer = Buffer.from(sigDer, 'binary');
+
+    console.log('Signature size:', sigBuffer.length, 'bytes');
 
     const zip = new JSZip();
     zip.file('pass.json', passJsonStr);
@@ -121,6 +144,8 @@ module.exports = async (req, res) => {
     zip.file('icon.png', iconBytes);
 
     const zipBuffer = await zip.generateAsync({ type: 'nodebuffer', compression: 'STORE' });
+
+    console.log('pkpass size:', zipBuffer.length, 'bytes');
 
     return res.status(200).json({ pkpass: zipBuffer.toString('base64') });
 
