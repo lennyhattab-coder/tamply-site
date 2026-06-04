@@ -77,7 +77,7 @@ async function genererPkpass(params) {
     foregroundColor: 'rgb(238, 238, 248)',
     backgroundColor,
     labelColor: 'rgb(200, 200, 220)',
-    storeCard: {
+    generic: {
       primaryFields: [{
         key: 'tampons',
         label: 'Progression',
