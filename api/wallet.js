@@ -115,16 +115,6 @@ async function genererPkpass(params) {
   const iconB64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVQI12NgAAIABQAABjkB6QAAAAAASUVORK5CYII=';
   const iconBuffer = Buffer.from(iconB64, 'base64');
 
-  // Fetch strip image
-  let stripBuffer = null;
-  if (photo_url) {
-    try {
-      const resp = await fetch(photo_url, { signal: AbortSignal.timeout(5000) });
-      if (resp.ok) stripBuffer = Buffer.from(await resp.arrayBuffer());
-    } catch (e) {
-      console.warn('[wallet] Strip fetch échoué:', e.message);
-    }
-  }
 
   // Fetch WWDR Apple (DER) → convertir en PEM via node-forge
   const wwdrResp = await fetch('https://www.apple.com/certificateauthority/AppleWWDRCAG3.cer');
@@ -144,10 +134,6 @@ async function genererPkpass(params) {
     fs.writeFileSync(path.join(tempDir, 'pass.json'), JSON.stringify(passJson));
     fs.writeFileSync(path.join(tempDir, 'icon.png'), iconBuffer);
     fs.writeFileSync(path.join(tempDir, 'icon@2x.png'), iconBuffer);
-    if (stripBuffer) {
-      fs.writeFileSync(path.join(tempDir, 'strip.png'), stripBuffer);
-      fs.writeFileSync(path.join(tempDir, 'strip@2x.png'), stripBuffer);
-    }
 
     const pass = await PKPass.from({
       model: tempDir,
@@ -157,6 +143,22 @@ async function genererPkpass(params) {
         signerKey: keyPem,
       }
     });
+
+    // thumbnail.png : image carrée à droite (type generic)
+    if (photo_url) {
+      try {
+        const stripResp = await fetch(photo_url,
+          { signal: AbortSignal.timeout(5000) });
+        if (stripResp.ok) {
+          const photoBuf = Buffer.from(await stripResp.arrayBuffer());
+          pass.addBuffer('thumbnail.png', photoBuf);
+          pass.addBuffer('thumbnail@2x.png', photoBuf);
+          console.log('[wallet] Thumbnail ajouté:', photoBuf.length, 'bytes');
+        }
+      } catch (e) {
+        console.warn('[wallet] Fetch photo échoué:', e.message);
+      }
+    }
 
     // passkit-generator v3.3.0 : getAsBuffer() (pas generate())
     return await pass.getAsBuffer();
