@@ -126,13 +126,15 @@ async function genererPkpass(params) {
     }
   }
 
-  // Fetch WWDR Apple
+  // Fetch WWDR Apple (DER) → convertir en PEM via node-forge
   const wwdrResp = await fetch('https://www.apple.com/certificateauthority/AppleWWDRCAG3.cer');
-  const wwdrBuffer = Buffer.from(await wwdrResp.arrayBuffer());
+  const wwdrDer = Buffer.from(await wwdrResp.arrayBuffer());
+  const wwdrCert = forge.pki.certificateFromAsn1(forge.asn1.fromDer(wwdrDer.toString('binary')));
+  const wwdrPem = Buffer.from(forge.pki.certificateToPem(wwdrCert));
 
   // Extraire cert PEM + clé PEM depuis le p12
   const { certPem, keyPem } = extractFromP12(p12b64, password);
-  console.log('[wallet] certPem:', certPem.length, 'bytes | keyPem:', keyPem.length, 'bytes');
+  console.log('[wallet] wwdrPem:', wwdrPem.length, 'bytes | certPem:', certPem.length, 'bytes | keyPem:', keyPem.length, 'bytes');
 
   // Écrire le modèle dans /tmp (seul dossier writable sur Vercel)
   const tempDir = path.join(os.tmpdir(), `tamply_${crypto.randomBytes(8).toString('hex')}.pass`);
@@ -150,7 +152,7 @@ async function genererPkpass(params) {
     const pass = await PKPass.from({
       model: tempDir,
       certificates: {
-        wwdr: wwdrBuffer,
+        wwdr: wwdrPem,
         signerCert: certPem,
         signerKey: keyPem,
       }
