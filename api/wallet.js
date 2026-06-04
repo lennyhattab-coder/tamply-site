@@ -117,9 +117,26 @@ module.exports = async (req, res) => {
     const certBags = p12.getBags({ bagType: forge.pki.oids.certBag });
     const certs = certBags[forge.pki.oids.certBag].map(b => b.cert);
 
+    // Télécharger le certificat WWDR Apple pour la chaîne complète
+    let wwdrCert = null;
+    try {
+      const wwdrResp = await fetch('https://www.apple.com/certificateauthority/AppleWWDRCAG3.cer');
+      if (wwdrResp.ok) {
+        const wwdrDer = Buffer.from(await wwdrResp.arrayBuffer());
+        const wwdrBin = wwdrDer.toString('binary');
+        wwdrCert = forge.pki.certificateFromAsn1(forge.asn1.fromDer(wwdrBin));
+        console.log('WWDR chargé:', wwdrCert.subject.getField('CN')?.value);
+      } else {
+        console.warn('WWDR inaccessible, status:', wwdrResp.status);
+      }
+    } catch (e) {
+      console.warn('WWDR fetch échoué:', String(e));
+    }
+
     const p7 = forge.pkcs7.createSignedData();
     p7.content = forge.util.createBuffer(manifestStr, 'utf8');
     certs.forEach(cert => p7.addCertificate(cert));
+    if (wwdrCert) p7.addCertificate(wwdrCert);
     p7.addSigner({
       key: keyBag.key,
       certificate: certs[0],
