@@ -1,4 +1,26 @@
 const { PKPass } = require('passkit-generator');
+const forge = require('node-forge');
+const fs = require('fs');
+const path = require('path');
+const os = require('os');
+const crypto = require('crypto');
+
+function extractFromP12(p12b64, password) {
+  const p12Der = Buffer.from(p12b64, 'base64').toString('binary');
+  const p12Asn1 = forge.asn1.fromDer(p12Der);
+  const p12 = forge.pkcs12.pkcs12FromAsn1(p12Asn1, false, password || '');
+
+  const keyBags = p12.getBags({ bagType: forge.pki.oids.pkcs8ShroudedKeyBag });
+  const certBags = p12.getBags({ bagType: forge.pki.oids.certBag });
+
+  const keyBag = keyBags[forge.pki.oids.pkcs8ShroudedKeyBag][0];
+  const certBag = certBags[forge.pki.oids.certBag][0];
+
+  return {
+    certPem: Buffer.from(forge.pki.certificateToPem(certBag.cert)),
+    keyPem: Buffer.from(forge.pki.privateKeyToPem(keyBag.key)),
+  };
+}
 
 async function genererPkpass(params) {
   const {
@@ -8,12 +30,10 @@ async function genererPkpass(params) {
   } = params;
 
   const p12b64 = process.env.APPLE_PASS_CERTIFICATE;
-  const password =
-    process.env.APPLE_PASS_CERTIFICATE_PASSWORD;
+  const password = process.env.APPLE_PASS_CERTIFICATE_PASSWORD;
+  console.log('Cert présent:', !!p12b64, 'Password présent:', !!password);
   if (!p12b64) throw new Error('Certificat manquant');
 
-  const label = systeme === 'points'
-    ? 'points' : 'tampons';
   const pts = parseInt(points) || 0;
   const mx = parseInt(max) || 10;
   const restants = Math.max(0, mx - pts);
@@ -21,124 +41,120 @@ async function genererPkpass(params) {
   const tamponsEmpty = '○'.repeat(restants);
   const tamponsVisuel = tamponsFilled + tamponsEmpty;
 
-  // Télécharger WWDR Apple
-  const wwdrResp = await fetch(
-    'https://www.apple.com/certificateauthority/AppleWWDRCAG3.cer'
-  );
-  const wwdrBuffer = Buffer.from(
-    await wwdrResp.arrayBuffer());
-
-  // Icône minimale
-  const iconB64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVQI12NgAAIABQAABjkB6QAAAAAASUVORK5CYII=';
-  const iconBuffer = Buffer.from(iconB64, 'base64');
-
-  // Couleur de fond
   let backgroundColor = 'rgb(79, 70, 229)';
   if (couleur) {
     const clean = couleur.replace(/^#/, '');
     if (/^[0-9a-f]{6}$/i.test(clean)) {
-      const r = parseInt(clean.slice(0,2), 16);
-      const g = parseInt(clean.slice(2,4), 16);
-      const b = parseInt(clean.slice(4,6), 16);
+      const r = parseInt(clean.slice(0, 2), 16);
+      const g = parseInt(clean.slice(2, 4), 16);
+      const b = parseInt(clean.slice(4, 6), 16);
       backgroundColor = `rgb(${r}, ${g}, ${b})`;
     }
   }
 
-  const pass = await PKPass.from({
-    model: {
-      'pass.json': Buffer.from(JSON.stringify({
-        formatVersion: 1,
-        passTypeIdentifier:
-          'pass.com.lensk0.fidelityapp',
-        serialNumber:
-          `${user_id}_${commercant_id}`,
-        teamIdentifier: 'PSU4H69TXL',
-        organizationName: 'Tamply',
-        description:
-          `Carte ${nom_commerce} — Tamply`,
-        logoText: nom_commerce || 'Tamply',
-        foregroundColor: 'rgb(238, 238, 248)',
-        backgroundColor,
-        labelColor: 'rgb(200, 200, 220)',
-        storeCard: {
-          primaryFields: [{
-            key: 'tampons',
-            label: 'Progression',
-            value: tamponsVisuel
-          }],
-          secondaryFields: [
-            { key: 'commerce',
-              label: 'Commerce',
-              value: nom_commerce },
-            { key: 'points',
-              label: `${pts}/${mx}`,
-              value: ligue || 'Bronze' }
-          ],
-          auxiliaryFields: [{
-            key: 'prochaine',
-            label: restants === 0
-              ? 'Récompense disponible !'
-              : `Plus que ${restants} tampon${restants > 1 ? 's' : ''}`,
-            value: ''
-          }],
-          backFields: [{
-            key: 'info',
-            label: 'Comment ça marche',
-            value: 'Présentez ce QR code en caisse pour gagner des tampons de fidélité.'
-          }]
-        },
-        barcode: {
-          message: `tamply://wallet/${user_id}/${commercant_id}`,
-          format: 'PKBarcodeFormatQR',
-          messageEncoding: 'iso-8859-1'
-        },
-        barcodes: [{
-          message: `tamply://wallet/${user_id}/${commercant_id}`,
-          format: 'PKBarcodeFormatQR',
-          messageEncoding: 'iso-8859-1'
-        }]
-      })),
-      'icon.png': iconBuffer,
-      'icon@2x.png': iconBuffer,
+  const passJson = {
+    formatVersion: 1,
+    passTypeIdentifier: 'pass.com.lensk0.fidelityapp',
+    serialNumber: `${user_id}_${commercant_id}`,
+    teamIdentifier: 'PSU4H69TXL',
+    organizationName: 'Tamply',
+    description: `Carte ${nom_commerce} — Tamply`,
+    logoText: nom_commerce || 'Tamply',
+    foregroundColor: 'rgb(238, 238, 248)',
+    backgroundColor,
+    labelColor: 'rgb(200, 200, 220)',
+    storeCard: {
+      primaryFields: [{
+        key: 'tampons',
+        label: 'Progression',
+        value: tamponsVisuel
+      }],
+      secondaryFields: [
+        { key: 'commerce', label: 'Commerce', value: nom_commerce || '' },
+        { key: 'points', label: `${pts}/${mx}`, value: ligue || 'Bronze' }
+      ],
+      auxiliaryFields: [{
+        key: 'prochaine',
+        label: restants === 0
+          ? 'Récompense disponible !'
+          : `Plus que ${restants} tampon${restants > 1 ? 's' : ''}`,
+        value: ''
+      }],
+      backFields: [{
+        key: 'info',
+        label: 'Comment ça marche',
+        value: 'Présentez ce QR code en caisse pour gagner des tampons de fidélité.'
+      }]
     },
-    certificates: {
-      wwdr: wwdrBuffer,
-      signerCert: Buffer.from(p12b64, 'base64'),
-      signerKey: Buffer.from(p12b64, 'base64'),
-      signerKeyPassphrase: password,
-    }
-  });
+    barcode: {
+      message: `tamply://wallet/${user_id}/${commercant_id}`,
+      format: 'PKBarcodeFormatQR',
+      messageEncoding: 'iso-8859-1'
+    },
+    barcodes: [{
+      message: `tamply://wallet/${user_id}/${commercant_id}`,
+      format: 'PKBarcodeFormatQR',
+      messageEncoding: 'iso-8859-1'
+    }]
+  };
 
-  // Strip image = photo du commerce
+  const iconB64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVQI12NgAAIABQAABjkB6QAAAAAASUVORK5CYII=';
+  const iconBuffer = Buffer.from(iconB64, 'base64');
+
+  // Fetch strip image (photo du commerce)
+  let stripBuffer = null;
   if (photo_url) {
     try {
-      const stripResp = await fetch(photo_url,
-        { signal: AbortSignal.timeout(5000) });
-      if (stripResp.ok) {
-        const stripBuf = Buffer.from(
-          await stripResp.arrayBuffer());
-        pass.addBuffer('strip.png', stripBuf);
-        pass.addBuffer('strip@2x.png', stripBuf);
-      }
+      const resp = await fetch(photo_url, { signal: AbortSignal.timeout(5000) });
+      if (resp.ok) stripBuffer = Buffer.from(await resp.arrayBuffer());
     } catch (e) {
       console.warn('Strip fetch échoué:', e.message);
     }
   }
 
-  const stream = pass.generate();
-  const chunks = [];
-  for await (const chunk of stream) chunks.push(chunk);
-  return Buffer.concat(chunks);
+  // Fetch WWDR Apple
+  const wwdrResp = await fetch('https://www.apple.com/certificateauthority/AppleWWDRCAG3.cer');
+  const wwdrBuffer = Buffer.from(await wwdrResp.arrayBuffer());
+
+  // Extraire cert PEM + clé PEM depuis le p12
+  const { certPem, keyPem } = extractFromP12(p12b64, password);
+
+  // Écrire le modèle dans /tmp (seul dossier writable sur Vercel)
+  const tempDir = path.join(os.tmpdir(), `tamply_${crypto.randomBytes(8).toString('hex')}.pass`);
+  fs.mkdirSync(tempDir, { recursive: true });
+
+  try {
+    fs.writeFileSync(path.join(tempDir, 'pass.json'), JSON.stringify(passJson));
+    fs.writeFileSync(path.join(tempDir, 'icon.png'), iconBuffer);
+    fs.writeFileSync(path.join(tempDir, 'icon@2x.png'), iconBuffer);
+    if (stripBuffer) {
+      fs.writeFileSync(path.join(tempDir, 'strip.png'), stripBuffer);
+      fs.writeFileSync(path.join(tempDir, 'strip@2x.png'), stripBuffer);
+    }
+
+    const pass = await PKPass.from({
+      model: tempDir,
+      certificates: {
+        wwdr: wwdrBuffer,
+        signerCert: certPem,
+        signerKey: keyPem,
+      }
+    });
+
+    const stream = pass.generate();
+    const chunks = [];
+    for await (const chunk of stream) chunks.push(chunk);
+    return Buffer.concat(chunks);
+  } finally {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  }
 }
 
 module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods',
-    'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers',
-    'Content-Type, Authorization');
-  if (req.method === 'OPTIONS')
-    return res.status(200).end();
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  if (req.method === 'OPTIONS') return res.status(200).end();
 
   if (req.method === 'GET') {
     try {
@@ -149,8 +165,7 @@ module.exports = async (req, res) => {
       } = req.query;
 
       if (!user_id || !commercant_id) {
-        return res.status(400).json(
-          { error: 'user_id et commercant_id requis' });
+        return res.status(400).json({ error: 'user_id et commercant_id requis' });
       }
 
       const buf = await genererPkpass({
@@ -164,31 +179,24 @@ module.exports = async (req, res) => {
         photo_url,
       });
 
-      res.setHeader('Content-Type',
-        'application/vnd.apple.pkpass');
-      res.setHeader('Content-Disposition',
-        'attachment; filename="tamply.pkpass"');
+      res.setHeader('Content-Type', 'application/vnd.apple.pkpass');
+      res.setHeader('Content-Disposition', 'attachment; filename="tamply.pkpass"');
       return res.status(200).send(buf);
     } catch (e) {
       console.error('GET wallet error:', e);
-      return res.status(500).json(
-        { error: String(e) });
+      return res.status(500).json({ error: String(e) });
     }
   }
 
   if (req.method === 'POST') {
     try {
       const buf = await genererPkpass(req.body);
-      return res.status(200).json({
-        pkpass: buf.toString('base64')
-      });
+      return res.status(200).json({ pkpass: buf.toString('base64') });
     } catch (e) {
       console.error('POST wallet error:', e);
-      return res.status(500).json(
-        { error: String(e) });
+      return res.status(500).json({ error: String(e) });
     }
   }
 
-  return res.status(405).json(
-    { error: 'Method not allowed' });
+  return res.status(405).json({ error: 'Method not allowed' });
 };
