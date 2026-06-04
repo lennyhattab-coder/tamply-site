@@ -55,6 +55,11 @@ async function genererPkpass(params) {
   const tamponsEmpty = '○'.repeat(restants);
   const tamponsVisuel = tamponsFilled + tamponsEmpty;
 
+  // couleur_hex pour canvas (avec #), backgroundColor pour passJson (rgb)
+  const couleur_hex = couleur && /^#?[0-9a-f]{6}$/i.test(couleur.replace(/^#/, ''))
+    ? (couleur.startsWith('#') ? couleur : `#${couleur}`)
+    : '#4F46E5';
+
   let backgroundColor = 'rgb(79, 70, 229)';
   if (couleur) {
     const clean = couleur.replace(/^#/, '');
@@ -77,7 +82,7 @@ async function genererPkpass(params) {
     foregroundColor: 'rgb(238, 238, 248)',
     backgroundColor,
     labelColor: 'rgb(200, 200, 220)',
-    generic: {
+    coupon: {
       primaryFields: [{
         key: 'tampons',
         label: 'Progression',
@@ -115,7 +120,6 @@ async function genererPkpass(params) {
   const iconB64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVQI12NgAAIABQAABjkB6QAAAAAASUVORK5CYII=';
   const iconBuffer = Buffer.from(iconB64, 'base64');
 
-
   // Fetch WWDR Apple (DER) → convertir en PEM via node-forge
   const wwdrResp = await fetch('https://www.apple.com/certificateauthority/AppleWWDRCAG3.cer');
   const wwdrDer = Buffer.from(await wwdrResp.arrayBuffer());
@@ -144,19 +148,65 @@ async function genererPkpass(params) {
       }
     });
 
-    // thumbnail.png : image carrée à droite (type generic)
+    // strip.png : photo pleine largeur (type coupon) — 750x246 px (2x)
     if (photo_url) {
       try {
-        const stripResp = await fetch(photo_url,
-          { signal: AbortSignal.timeout(5000) });
-        if (stripResp.ok) {
-          const photoBuf = Buffer.from(await stripResp.arrayBuffer());
-          pass.addBuffer('thumbnail.png', photoBuf);
-          pass.addBuffer('thumbnail@2x.png', photoBuf);
-          console.log('[wallet] Thumbnail ajouté:', photoBuf.length, 'bytes');
+        const { createCanvas, loadImage } = require('canvas');
+
+        const imgResp = await fetch(photo_url, { signal: AbortSignal.timeout(5000) });
+        if (imgResp.ok) {
+          const imgBuf = Buffer.from(await imgResp.arrayBuffer());
+          const img = await loadImage(imgBuf);
+
+          const canvas = createCanvas(750, 246);
+          const ctx = canvas.getContext('2d');
+
+          // Fond couleur du commerce
+          ctx.fillStyle = couleur_hex;
+          ctx.fillRect(0, 0, 750, 246);
+
+          // Photo en cover (centré, recadré)
+          const scale = Math.max(750 / img.width, 246 / img.height);
+          const w = img.width * scale;
+          const h = img.height * scale;
+          const x = (750 - w) / 2;
+          const y = (246 - h) / 2;
+          ctx.drawImage(img, x, y, w, h);
+
+          const stripBuf = canvas.toBuffer('image/png');
+          pass.addBuffer('strip.png', stripBuf);
+          pass.addBuffer('strip@2x.png', stripBuf);
+          console.log('[wallet] Strip image ajoutée:', stripBuf.length, 'bytes');
         }
       } catch (e) {
-        console.warn('[wallet] Fetch photo échoué:', e.message);
+        console.warn('[wallet] Strip échoué:', e.message);
+        // Fallback : strip colorée sans image
+        try {
+          const { createCanvas } = require('canvas');
+          const canvas = createCanvas(750, 246);
+          const ctx = canvas.getContext('2d');
+          ctx.fillStyle = couleur_hex;
+          ctx.fillRect(0, 0, 750, 246);
+          const stripBuf = canvas.toBuffer('image/png');
+          pass.addBuffer('strip.png', stripBuf);
+          pass.addBuffer('strip@2x.png', stripBuf);
+        } catch (e2) {
+          console.warn('[wallet] Fallback strip échoué:', e2.message);
+        }
+      }
+    } else {
+      // Pas de photo → strip colorée unie
+      try {
+        const { createCanvas } = require('canvas');
+        const canvas = createCanvas(750, 246);
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = couleur_hex;
+        ctx.fillRect(0, 0, 750, 246);
+        const stripBuf = canvas.toBuffer('image/png');
+        pass.addBuffer('strip.png', stripBuf);
+        pass.addBuffer('strip@2x.png', stripBuf);
+      } catch (e) {
+        console.warn('[wallet] Strip colorée échouée:', e.message);
       }
     }
 
