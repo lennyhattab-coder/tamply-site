@@ -108,20 +108,25 @@ async function genererPkpass(params) {
     coupon: {
       primaryFields: [{
         key: 'tampons',
-        label: 'Progression',
-        value: genererTampons(pts, mx)
+        label: `${pts}/${mx} tampon${mx > 1 ? 's' : ''}`,
+        value: genererTampons(pts, mx).split('\n')[0] || genererTampons(pts, mx)
       }],
       secondaryFields: [
         { key: 'commerce', label: 'Commerce', value: nom_commerce || '' },
-        { key: 'points', label: `${pts}/${mx}`, value: ligue || 'Bronze' }
+        { key: 'ligue', label: 'Ligue', value: ligue || 'Bronze' }
       ],
-      auxiliaryFields: [{
-        key: 'prochaine',
-        label: restants === 0
-          ? 'Récompense disponible !'
-          : `Plus que ${restants} tampon${restants > 1 ? 's' : ''}`,
-        value: ''
-      }],
+      auxiliaryFields: [
+        ...(genererTampons(pts, mx).includes('\n')
+          ? [{ key: 'tampons2', label: '', value: genererTampons(pts, mx).split('\n')[1] }]
+          : []),
+        {
+          key: 'prochaine',
+          label: restants === 0
+            ? 'Récompense disponible !'
+            : `Plus que ${restants} tampon${restants > 1 ? 's' : ''}`,
+          value: ''
+        }
+      ],
       backFields: [{
         key: 'info',
         label: 'Comment ça marche',
