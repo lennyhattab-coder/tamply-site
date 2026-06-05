@@ -102,10 +102,15 @@ async function genererPkpass(params) {
     backgroundColor,
     labelColor: 'rgb(200, 200, 220)',
     coupon: {
+      headerFields: [{
+        key: 'type',
+        label: '',
+        value: 'CARTE FIDELITE'
+      }],
       primaryFields: [{
         key: 'progression',
         label: systeme === 'points' ? 'POINTS' : 'TAMPONS',
-        value: `${pts} / ${mx}`
+        value: systeme === 'points' ? `${pts} points` : `${pts} / ${mx}`
       }],
       secondaryFields: [],
       auxiliaryFields: [{
@@ -180,6 +185,16 @@ async function genererPkpass(params) {
           pass.addBuffer('strip.png', strip1x);
           pass.addBuffer('strip@2x.png', strip2x);
           console.log('[wallet] Strip image ajoutée avec sharp');
+
+          // Logo : même photo redimensionnée en haut à gauche
+          try {
+            const logo1x = await sharp(imgBuf).resize(160, 50, { fit: 'inside' }).png().toBuffer();
+            const logo2x = await sharp(imgBuf).resize(320, 100, { fit: 'inside' }).png().toBuffer();
+            pass.addBuffer('logo.png', logo1x);
+            pass.addBuffer('logo@2x.png', logo2x);
+          } catch (eLogo) {
+            console.warn('[wallet] Logo échoué:', eLogo.message);
+          }
         } else {
           pass.addBuffer('strip.png', await stripFallback(375, 123));
           pass.addBuffer('strip@2x.png', await stripFallback(750, 246));
