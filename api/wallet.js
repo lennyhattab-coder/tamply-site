@@ -72,18 +72,23 @@ async function genererPkpass(params) {
   const mx = parseInt(max) || 10;
   const restants = Math.max(0, mx - pts);
 
-  // Couleur parsée en RGB (noir par défaut)
-  const couleurRgb = { r: 20, g: 20, b: 20 };
-  let backgroundColor = 'rgb(20, 20, 20)';
+  // Couleur parsée en RGB (gris foncé par défaut)
+  let couleurRgb = null;
+  let backgroundColor = 'rgb(45, 45, 55)';
   if (couleur) {
     const clean = couleur.replace(/^#/, '');
     if (/^[0-9a-f]{6}$/i.test(clean)) {
-      couleurRgb.r = parseInt(clean.slice(0, 2), 16);
-      couleurRgb.g = parseInt(clean.slice(2, 4), 16);
-      couleurRgb.b = parseInt(clean.slice(4, 6), 16);
+      couleurRgb = {
+        r: parseInt(clean.slice(0, 2), 16),
+        g: parseInt(clean.slice(2, 4), 16),
+        b: parseInt(clean.slice(4, 6), 16),
+      };
       backgroundColor = `rgb(${couleurRgb.r}, ${couleurRgb.g}, ${couleurRgb.b})`;
     }
   }
+  const stripBg = couleurRgb || { r: 45, g: 45, b: 55 };
+
+  const label = systeme === 'points' ? 'point' : 'tampon';
 
   const passJson = {
     formatVersion: 1,
@@ -91,25 +96,23 @@ async function genererPkpass(params) {
     serialNumber: `${user_id}_${commercant_id}`,
     teamIdentifier: 'PSU4H69TXL',
     organizationName: 'Tamply',
-    description: `Carte ${nom_commerce} — Tamply`,
+    description: `Carte ${nom_commerce}`,
     logoText: nom_commerce || 'Tamply',
-    foregroundColor: 'rgb(238, 238, 248)',
+    foregroundColor: 'rgb(255, 255, 255)',
     backgroundColor,
     labelColor: 'rgb(200, 200, 220)',
     coupon: {
       primaryFields: [{
-        key: systeme === 'points' ? 'points' : 'tampons',
+        key: 'progression',
         label: systeme === 'points' ? 'POINTS' : 'TAMPONS',
         value: `${pts} / ${mx}`
       }],
-      secondaryFields: [
-        { key: 'ligue', label: 'LIGUE', value: ligue || 'Bronze' }
-      ],
+      secondaryFields: [],
       auxiliaryFields: [{
         key: 'prochaine',
         label: restants === 0
           ? 'Récompense disponible !'
-          : `Plus que ${restants} tampon${restants > 1 ? 's' : ''}`,
+          : `Plus que ${restants} ${label}${restants > 1 ? 's' : ''}`,
         value: ''
       }],
       backFields: [{
@@ -164,7 +167,7 @@ async function genererPkpass(params) {
     // strip.png : photo pleine largeur (type coupon) — sharp compatible Vercel
     const sharp = require('sharp');
     const stripFallback = async (w, h) => sharp({
-      create: { width: w, height: h, channels: 3, background: couleurRgb }
+      create: { width: w, height: h, channels: 3, background: stripBg }
     }).png().toBuffer();
 
     if (photo_url) {
