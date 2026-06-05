@@ -72,25 +72,16 @@ async function genererPkpass(params) {
   const mx = parseInt(max) || 10;
   const restants = Math.max(0, mx - pts);
 
-  // Couleur parsée en RGB pour sharp (fallback strip colorée)
-  const couleurRgb = { r: 79, g: 70, b: 229 };
+  // Couleur parsée en RGB (noir par défaut)
+  const couleurRgb = { r: 20, g: 20, b: 20 };
+  let backgroundColor = 'rgb(20, 20, 20)';
   if (couleur) {
     const clean = couleur.replace(/^#/, '');
     if (/^[0-9a-f]{6}$/i.test(clean)) {
       couleurRgb.r = parseInt(clean.slice(0, 2), 16);
       couleurRgb.g = parseInt(clean.slice(2, 4), 16);
       couleurRgb.b = parseInt(clean.slice(4, 6), 16);
-    }
-  }
-
-  let backgroundColor = 'rgb(79, 70, 229)';
-  if (couleur) {
-    const clean = couleur.replace(/^#/, '');
-    if (/^[0-9a-f]{6}$/i.test(clean)) {
-      const r = parseInt(clean.slice(0, 2), 16);
-      const g = parseInt(clean.slice(2, 4), 16);
-      const b = parseInt(clean.slice(4, 6), 16);
-      backgroundColor = `rgb(${r}, ${g}, ${b})`;
+      backgroundColor = `rgb(${couleurRgb.r}, ${couleurRgb.g}, ${couleurRgb.b})`;
     }
   }
 
@@ -107,26 +98,20 @@ async function genererPkpass(params) {
     labelColor: 'rgb(200, 200, 220)',
     coupon: {
       primaryFields: [{
-        key: 'tampons',
-        label: `${pts}/${mx} tampon${mx > 1 ? 's' : ''}`,
-        value: genererTampons(pts, mx).split('\n')[0] || genererTampons(pts, mx)
+        key: systeme === 'points' ? 'points' : 'tampons',
+        label: systeme === 'points' ? 'POINTS' : 'TAMPONS',
+        value: `${pts} / ${mx}`
       }],
       secondaryFields: [
-        { key: 'commerce', label: 'Commerce', value: nom_commerce || '' },
-        { key: 'ligue', label: 'Ligue', value: ligue || 'Bronze' }
+        { key: 'ligue', label: 'LIGUE', value: ligue || 'Bronze' }
       ],
-      auxiliaryFields: [
-        ...(genererTampons(pts, mx).includes('\n')
-          ? [{ key: 'tampons2', label: '', value: genererTampons(pts, mx).split('\n')[1] }]
-          : []),
-        {
-          key: 'prochaine',
-          label: restants === 0
-            ? 'Récompense disponible !'
-            : `Plus que ${restants} tampon${restants > 1 ? 's' : ''}`,
-          value: ''
-        }
-      ],
+      auxiliaryFields: [{
+        key: 'prochaine',
+        label: restants === 0
+          ? 'Récompense disponible !'
+          : `Plus que ${restants} tampon${restants > 1 ? 's' : ''}`,
+        value: ''
+      }],
       backFields: [{
         key: 'info',
         label: 'Comment ça marche',
