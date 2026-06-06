@@ -97,7 +97,7 @@ async function genererPkpass(params) {
     teamIdentifier: 'PSU4H69TXL',
     organizationName: 'Tamply',
     description: `Carte ${nom_commerce}`,
-    logoText: nom_commerce || 'Tamply',
+    logoText: (nom_commerce || 'Tamply').toUpperCase(),
     foregroundColor: 'rgb(255, 255, 255)',
     backgroundColor,
     labelColor: 'rgb(200, 200, 220)',
@@ -105,7 +105,7 @@ async function genererPkpass(params) {
       headerFields: [{
         key: 'type',
         label: '',
-        value: 'FIDELITE'
+        value: 'CARTE\nFIDÉLITÉ'
       }],
       primaryFields: [],
       secondaryFields: [{
@@ -113,13 +113,7 @@ async function genererPkpass(params) {
         label: systeme === 'points' ? 'POINTS' : 'TAMPONS',
         value: systeme === 'points' ? `${pts} points` : `${pts} / ${mx}`
       }],
-      auxiliaryFields: [{
-        key: 'prochaine',
-        label: restants === 0
-          ? 'Récompense disponible !'
-          : `Plus que ${restants} ${label}${restants > 1 ? 's' : ''}`,
-        value: ''
-      }],
+      auxiliaryFields: [],
       backFields: [{
         key: 'info',
         label: 'Comment ça marche',
@@ -181,7 +175,12 @@ async function genererPkpass(params) {
         if (imgResp.ok) {
           const imgBuf = Buffer.from(await imgResp.arrayBuffer());
           const strip1x = await sharp(imgBuf).resize(375, 123, { fit: 'cover' }).png().toBuffer();
-          const strip2x = await sharp(imgBuf).resize(750, 246, { fit: 'cover' }).png().toBuffer();
+          const strip2x = await sharp({
+            create: { width: 750, height: 246, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } }
+          }).composite([{
+            input: await sharp(imgBuf).resize(750, 246, { fit: 'cover' }).toBuffer(),
+            blend: 'over'
+          }]).png().toBuffer();
           pass.addBuffer('strip.png', strip1x);
           pass.addBuffer('strip@2x.png', strip2x);
           console.log('[wallet] Strip image ajoutée avec sharp');
