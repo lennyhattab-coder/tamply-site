@@ -105,8 +105,8 @@ async function genererPkpass(params) {
       headerFields: [{
         key: 'type',
         label: '',
-        label: 'CARTE',
-        value: 'FIDÉLITÉ'
+        label: 'CARTE\nFIDÉLITÉ',
+        value: ''
       }],
       primaryFields: [],
       secondaryFields: [{
