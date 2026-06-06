@@ -102,12 +102,10 @@ async function genererPkpass(params) {
     backgroundColor,
     labelColor: 'rgb(200, 200, 220)',
     coupon: {
-      headerFields: [{
-        key: 'type',
-        label: '',
-        label: 'CARTE FIDÉLITÉ',
-        value: ''
-      }],
+      headerFields: [
+        { key: 'type1', label: 'CARTE', value: '' },
+        { key: 'type2', label: 'FIDÉLITÉ', value: '' }
+      ],
       primaryFields: [],
       secondaryFields: [{
         key: 'progression',
