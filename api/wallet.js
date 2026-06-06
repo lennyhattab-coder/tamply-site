@@ -97,7 +97,7 @@ async function genererPkpass(params) {
     teamIdentifier: 'PSU4H69TXL',
     organizationName: 'Tamply',
     description: `Carte ${nom_commerce}`,
-    logoText: (nom_commerce || 'Tamply').toUpperCase(),
+    logoText: nom_commerce || 'Tamply',
     foregroundColor: 'rgb(255, 255, 255)',
     backgroundColor,
     labelColor: 'rgb(200, 200, 220)',
@@ -105,7 +105,8 @@ async function genererPkpass(params) {
       headerFields: [{
         key: 'type',
         label: '',
-        value: 'CARTE\nFIDÉLITÉ'
+        label: 'CARTE',
+        value: 'FIDÉLITÉ'
       }],
       primaryFields: [],
       secondaryFields: [{
@@ -174,13 +175,21 @@ async function genererPkpass(params) {
         const imgResp = await fetch(photo_url, { signal: AbortSignal.timeout(5000) });
         if (imgResp.ok) {
           const imgBuf = Buffer.from(await imgResp.arrayBuffer());
-          const strip1x = await sharp(imgBuf).resize(375, 123, { fit: 'cover' }).png().toBuffer();
-          const strip2x = await sharp({
-            create: { width: 750, height: 246, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } }
-          }).composite([{
-            input: await sharp(imgBuf).resize(750, 246, { fit: 'cover' }).toBuffer(),
-            blend: 'over'
-          }]).png().toBuffer();
+          const radius = 20;
+          const svgMask1x = Buffer.from(
+            `<svg><rect x="0" y="0" width="375" height="123" rx="${radius}" ry="${radius}"/></svg>`
+          );
+          const svgMask2x = Buffer.from(
+            `<svg><rect x="0" y="0" width="750" height="246" rx="${radius}" ry="${radius}"/></svg>`
+          );
+          const strip1x = await sharp(imgBuf)
+            .resize(375, 123, { fit: 'cover' })
+            .composite([{ input: svgMask1x, blend: 'dest-in' }])
+            .png().toBuffer();
+          const strip2x = await sharp(imgBuf)
+            .resize(750, 246, { fit: 'cover' })
+            .composite([{ input: svgMask2x, blend: 'dest-in' }])
+            .png().toBuffer();
           pass.addBuffer('strip.png', strip1x);
           pass.addBuffer('strip@2x.png', strip2x);
           console.log('[wallet] Strip image ajoutée avec sharp');
