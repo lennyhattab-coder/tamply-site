@@ -1,4 +1,4 @@
-// passkit-generator est ESM-only — import() dynamique obligatoire (pas require())
+﻿// passkit-generator est ESM-only — import() dynamique obligatoire (pas require())
 const forge = require('node-forge');
 const fs = require('fs');
 const path = require('path');
@@ -103,8 +103,7 @@ async function genererPkpass(params) {
     labelColor: 'rgb(200, 200, 220)',
     coupon: {
       headerFields: [
-        { key: 'type1', label: 'CARTE', value: '' },
-        { key: 'type2', label: 'FIDÉLITÉ', value: '' }
+        { key: 'type', label: 'CARTE FIDÉLITÉ', value: '' }
       ],
       primaryFields: [],
       secondaryFields: [{
