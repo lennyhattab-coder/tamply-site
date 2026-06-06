@@ -105,14 +105,14 @@ async function genererPkpass(params) {
       headerFields: [{
         key: 'type',
         label: '',
-        value: 'CARTE FIDELITE'
+        value: 'FIDELITE'
       }],
-      primaryFields: [{
+      primaryFields: [],
+      secondaryFields: [{
         key: 'progression',
         label: systeme === 'points' ? 'POINTS' : 'TAMPONS',
         value: systeme === 'points' ? `${pts} points` : `${pts} / ${mx}`
       }],
-      secondaryFields: [],
       auxiliaryFields: [{
         key: 'prochaine',
         label: restants === 0
