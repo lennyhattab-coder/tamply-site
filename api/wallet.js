@@ -127,7 +127,12 @@ async function genererPkpass(params) {
       message: `tamply://wallet/${user_id}/${commercant_id}`,
       format: 'PKBarcodeFormatQR',
       messageEncoding: 'iso-8859-1'
-    }]
+    }],
+    webServiceURL: 'https://tamply.fr/api',
+    authenticationToken: crypto.createHash('sha256')
+      .update(`${user_id}_${commercant_id}`)
+      .digest('hex')
+      .substring(0, 32),
   };
 
   const iconB64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVQI12NgAAIABQAABjkB6QAAAAAASUVORK5CYII=';
@@ -280,3 +285,5 @@ module.exports = async (req, res) => {
 
   return res.status(405).json({ error: 'Method not allowed' });
 };
+
+module.exports.genererPkpass = genererPkpass;
